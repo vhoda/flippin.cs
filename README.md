@@ -2,7 +2,8 @@
 this repository was alternatively created to solve a GUI issue.
 The original repository when it is at 100x Windows scale, works perfectly. But if you have a 2k ->4k type screen, Windows scaling will be affected. and this causes a lot of confusion when using the script
 
-![a](https://github.com/vhoda/flippin.cs/assets/70240006/348bf42c-dbe5-4291-92f7-bc39cde275fa)
+![a](https://github.com/vhoda/flippin.cs/assets/70240006/8fcd1a11-9bf2-47ac-a43c-cd96961054bd)
+
 
 ## Installation 
 **If you use a Vegas version older than 14, change "using ScriptPortal.Vegas" to "using Sony.Vegas" on line 13 in the script.**
