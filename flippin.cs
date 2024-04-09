@@ -172,7 +172,7 @@ class Prompt
         {
             Left = 10, // Ajuste de la posición izquierda
             Top = 316, // Ajuste de la posición superior
-            Text = "Copyright (c) 2019 - 2024, Rev. 15 | @sykhro",
+            Text = "Copyright (c) 2019 - 2024, Rev. 15 | @sykhro - @vhodita",
             Height = 50, // Ajuste de la altura
             BackColor = System.Drawing.Color.Transparent
         };
