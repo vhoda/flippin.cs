@@ -219,9 +219,9 @@ class Prompt
         Button confirmation = new Button()
         {
             Text = "Flip the clips",
-            Left = 820, // Ajuste de la posición izquierda
-            Width = 120, // Ajuste del ancho
-            Top = 406, // Ajuste de la posición superior
+            Left = 760, // Ajuste de la posición izquierda
+            Width = 180, // Ajuste del ancho
+            Top = 360, // Ajuste de la posición superior
             DialogResult = DialogResult.OK
         };
         RadioButton mode1 = new RadioButton()
