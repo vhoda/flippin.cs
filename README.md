@@ -1,4 +1,3 @@
-https://github.com/vhoda/flippin.cs
 *NOTE: 
 this repository was alternatively created to solve a GUI issue.
 The original repository when it is at 100x Windows scale, works perfectly. But if you have a 2k ->4k type screen, Windows scaling will be affected. and this causes a lot of confusion when using the script
