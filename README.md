@@ -2,8 +2,10 @@
 this repository was alternatively created to solve a GUI issue.
 The original repository when it is at 100x Windows scale, works perfectly. But if you have a 2k ->4k type screen, Windows scaling will be affected. and this causes a lot of confusion when using the script
 
-![a](https://github.com/vhoda/flippin.cs/assets/70240006/8fcd1a11-9bf2-47ac-a43c-cd96961054bd)
+![before](https://github.com/user-attachments/assets/4d158088-4b54-4925-9ac1-daecda5f192a)
 
+
+*Updated 9/26/2024
 
 ## Installation 
 **If you use a Vegas version older than 14, change "using ScriptPortal.Vegas" to "using Sony.Vegas" on line 13 in the script.**
@@ -26,6 +28,12 @@ Just go on Options -> Customize Toolbar; then, scroll down until you see the scr
 - [ ] Run the script (using the toolbar or Tools -> Scripting -> scriptname.cs)
 - [ ] Input the number of the track that contains the clip to be flipped
 - [ ] Enjoy
+
+## Menu
+- [ ] 1 Getting to (Does nothing)
+- [ ] 1 2 Only Horizontal Flip
+- [ ] 1 3 Only Vertical Flip
+- [ ] 1 4 Both (Arps)
 
 ## License
 This program is free software; you can redistribute it and/or modify
