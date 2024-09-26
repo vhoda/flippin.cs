@@ -35,3 +35,4 @@ the Free Software Foundation; either version 3 of the License, or
 
 Originally credits for the original repository by 
 sykhro: https://gist.github.com/sykhro/923c79923463b5fe68b5
+Thank you `@Gaopringao` for the multiple options!
