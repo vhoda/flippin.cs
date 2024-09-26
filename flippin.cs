@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using ScriptPortal.Vegas;
@@ -6,27 +7,26 @@ using ScriptPortal.Vegas;
 public enum flipMode
 {
     horizontal,
-    vertical
+    vertical,
+    both,
+    none
 };
 
 public struct Options
 {
     public int targetTrack;
-    public int interval;
-    public flipMode mode;
+    public List<int> flipPattern;
     public bool disableResample;
 };
 
-class
-EntryPoint
+class EntryPoint
 {
     private int videoTracksNum;
     private Dictionary<string, int> projVideoTracks = new Dictionary<string, int>();
 
     Vegas vegas;
 
-    public
-    void FromVegas(Vegas instance)
+    public void FromVegas(Vegas instance)
     {
         vegas = instance;
 
@@ -34,38 +34,30 @@ EntryPoint
 
         if (videoTracksNum == 0)
         {
-            MessageBox.Show("Project doesn't contain video tracks",
-            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
+            MessageBox.Show("Project doesn't contain video tracks", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
         Options? options = Prompt.GetOptions(projVideoTracks);
         if (options.HasValue)
         {
-            FlipAndDisable(options.Value);
+            FlipByPattern(options.Value);
         }
-
-        return;
     }
 
-    public
-    void IndexProjectTracks()
+    public void IndexProjectTracks()
     {
         foreach (Track track in vegas.Project.Tracks)
         {
             if (track.IsVideo())
             {
                 videoTracksNum++;
-                projVideoTracks.Add("Track #" + (track.Index + 1).ToString() +
-                                          (String.IsNullOrWhiteSpace(track.Name) ?
-                                          ("") : (" | (" + track.Name + ")")), track.Index);
+                projVideoTracks.Add("Track #" + (track.Index + 1).ToString() + (String.IsNullOrWhiteSpace(track.Name) ? ("") : (" | (" + track.Name + ")")), track.Index);
             }
         }
     }
 
-    public
-    void FlipAndDisable(Options options)
+    public void FlipByPattern(Options options)
     {
         Track worktrack = vegas.Project.Tracks[options.targetTrack];
 
@@ -78,71 +70,62 @@ EntryPoint
             }
         }
 
-        bool flipping = false;
         int flippedElements = 0;
         int counter = 0;
+        int patternLength = options.flipPattern.Count;
 
         foreach (TrackEvent ev in worktrack.Events)
         {
             VideoEvent ve = (VideoEvent)ev;
+            int patternIndex = counter % patternLength;
+            int flipOption = options.flipPattern[patternIndex];
+            flipMode mode = GetFlipMode(flipOption);
 
-            // Start from the selected clip
-            if (ev.Selected)
+            if (mode != flipMode.none)
             {
-                flipping = true;
-            }
-
-            if (!flipping)
-            {
-                continue;
-            }
-
-            if (options.interval == counter)
-            {
-                VideoMotionKeyframe kf = ve.VideoMotion.Keyframes[0]; // Seek to the first keyframe
-
-                // Assign video vertexes to keyframes
+                VideoMotionKeyframe kf = ve.VideoMotion.Keyframes[0];
                 VideoMotionVertex tl = kf.TopLeft;
                 VideoMotionVertex tr = kf.TopRight;
                 VideoMotionVertex bl = kf.BottomLeft;
                 VideoMotionVertex br = kf.BottomRight;
 
-                switch (options.mode)
+                switch (mode)
                 {
                     case flipMode.vertical:
-                        // Re-bound them, in order to produce a vertical flip.
                         VideoMotionBounds bv = new VideoMotionBounds(bl, br, tr, tl);
                         ve.VideoMotion.Keyframes[0].Bounds = bv;
                         break;
-
                     case flipMode.horizontal:
-                        // Re-bound them, in order to produce a horizontal flip.
                         VideoMotionBounds bh = new VideoMotionBounds(tr, tl, bl, br);
                         ve.VideoMotion.Keyframes[0].Bounds = bh;
                         break;
+                    case flipMode.both:
+                        VideoMotionBounds bb = new VideoMotionBounds(br, bl, tl, tr);
+                        ve.VideoMotion.Keyframes[0].Bounds = bb;
+                        break;
                 }
 
-
-
-                counter = 0;
-                ++flippedElements;
-            }
-            else
-            {
-                ++counter;
+                flippedElements++;
             }
 
+            counter++;
         }
 
-        MessageBox.Show(flippedElements == 0 ?
-        "There was nothing to flip" :
-        (string.Format("{1} elements on Track #{0} have been successfully flipped", (options.targetTrack + 1), flippedElements)),
-        "All done", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show(flippedElements == 0 ? "There was nothing to flip" : string.Format("{1} elements on Track #{0} have been successfully flipped", (options.targetTrack + 1), flippedElements), "All done", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
 
-        return;
+    private flipMode GetFlipMode(int option)
+    {
+        switch (option)
+        {
+            case 1: return flipMode.none;
+            case 2: return flipMode.horizontal;
+            case 3: return flipMode.vertical;
+            case 4: return flipMode.both;
+            default: return flipMode.none;
+        }
     }
 }
-
 
 class Prompt
 {
@@ -150,93 +133,50 @@ class Prompt
     {
         Form prompt = new Form()
         {
-            Width = 960, // Ajuste al doble del ancho original
-            Height = 460, // Ajuste al doble de la altura original
+            Width = 480,
+            Height = 250,
             FormBorderStyle = FormBorderStyle.FixedSingle,
             MaximizeBox = false,
             MinimizeBox = false,
             ShowIcon = false,
-            Text = "Automatic horizontal flipping"
+            Text = "vhoda's automatic flipping with patterns",
+            AutoScaleMode = AutoScaleMode.Dpi // Escalado automático para DPI
         };
 
-        Label instructions = new Label()
+        // Obtener DPI actual
+        using (Graphics g = prompt.CreateGraphics())
         {
-            Left = 10, // Ajuste de la posición izquierda
-            Top = 10, // Ajuste de la posición superior
+            float dpiX = g.DpiX;
+            float dpiFactor = dpiX / 96.0f; // 96 es el DPI estándar en Windows
+
+            // Ajustar tamaño del formulario
+            prompt.Width = (int)(prompt.Width * dpiFactor);
+            prompt.Height = (int)(prompt.Height * dpiFactor);
+        }
+
+        // Crear un TableLayoutPanel para organizar los controles
+        TableLayoutPanel layoutPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 4,
+            AutoSize = true
+        };
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70F)); // 70% del ancho para la primera columna
+        layoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F)); // 30% del ancho para la segunda columna
+
+        Label instructions = new Label
+        {
             Text = "Where do you want the flipping to happen?",
-            Width = 600, // Ajuste del ancho
-            Height = 100, // Ajuste de la altura
-            BackColor = System.Drawing.Color.Transparent
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            TextAlign = ContentAlignment.MiddleLeft
         };
-        Label copyright = new Label()
+
+        ComboBox inputValue = new ComboBox
         {
-            Left = 10, // Ajuste de la posición izquierda
-            Top = 316, // Ajuste de la posición superior
-            Text = "Copyright (c) 2019 - 2024, Rev. 15 | @sykhro - @vhodita",
-            Height = 50, // Ajuste de la altura
-            BackColor = System.Drawing.Color.Transparent
-        };
-        GroupBox settings = new GroupBox()
-        {
-            Left = 14, // Ajuste de la posición izquierda
-            Top = 85, // Ajuste de la posición superior
-            Text = "Settings",
-            Width = 920, // Ajuste del ancho
-            Height = 280 // Ajuste de la altura
-        };
-        CheckBox resample = new CheckBox()
-        {
-            Left = 20, // Ajuste de la posición izquierda
-            Top = 116, // Ajuste de la posición superior
-            Text = "Disable resample for all the clips in the track (recommended)",
-            Width = 660, // Ajuste del ancho
-            Height = 50, // Ajuste de la altura
-            Checked = true,
-            BackColor = System.Drawing.Color.Transparent
-        };
-        ComboBox inputValue = new ComboBox()
-        {
-            Left = 14, // Ajuste de la posición izquierda
-            Top = 40, // Ajuste de la posición superior
-            Width = 920 // Ajuste del ancho
-        };
-        NumericUpDown inputValueInterval = new NumericUpDown()
-        {
-            Left = 20, // Ajuste de la posición izquierda
-            Top = 160, // Ajuste de la posición superior
-            Width = 160, // Ajuste del ancho
-            Minimum = 1
-        };
-        Label interval = new Label()
-        {
-            Left = 18, // Ajuste de la posición izquierda
-            Top = 190, // Ajuste de la posición superior
-            Text = "Interval of clip flipping. \nLeave '1' for the classic effect",
-            Width = 600, // Ajuste del ancho
-            Height = 60, // Ajuste de la altura
-            BackColor = System.Drawing.Color.Transparent
-        };
-        Button confirmation = new Button()
-        {
-            Text = "Flip the clips",
-            Left = 760, // Ajuste de la posición izquierda
-            Width = 180, // Ajuste del ancho
-            Top = 360, // Ajuste de la posición superior
-            DialogResult = DialogResult.OK
-        };
-        RadioButton mode1 = new RadioButton()
-        {
-            Text = "Horizontal flipping",
-            Left = 440, // Ajuste de la posición izquierda
-            Top = 160, // Ajuste de la posición superior
-            Width = 240, // Ajuste del ancho
-            Checked = true
-        };
-        RadioButton mode2 = new RadioButton()
-        {
-            Text = "Vertical flipping",
-            Left = 680, // Ajuste de la posición izquierda
-            Top = 160 // Ajuste de la posición superior
+            Dock = DockStyle.Fill,
+            DropDownStyle = ComboBoxStyle.DropDownList
         };
 
         inputValue.BeginUpdate();
@@ -245,32 +185,64 @@ class Prompt
         inputValue.ValueMember = "Value";
         inputValue.EndUpdate();
 
-        inputValue.DropDownStyle = ComboBoxStyle.DropDownList;
-
-        prompt.Controls.Add(mode1);
-        prompt.Controls.Add(mode2);
-        prompt.Controls.Add(inputValue);
-        prompt.Controls.Add(confirmation);
-        prompt.Controls.Add(inputValueInterval);
-        prompt.Controls.Add(interval);
-        prompt.Controls.Add(resample);
-        prompt.Controls.Add(settings);
-        prompt.Controls.Add(instructions);
-        prompt.Controls.Add(copyright);
-        prompt.AcceptButton = confirmation;
-
-        confirmation.Click += (sender, e) =>
+        Label patternLabel = new Label
         {
-            prompt.Close();
+            Text = "Enter the flip pattern (e.g. 1 2 3 4): \n 1: Getting to \n 2: Horizontal flip \n 3: Vertical flip \n 4: Both flips(Arps)",
+            Dock = DockStyle.Fill,
+            AutoSize = true
         };
+
+        TextBox patternInput = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Text = "1 2"
+        };
+
+        CheckBox resample = new CheckBox
+        {
+            Text = "Disable resample for all clips",
+            Checked = true,
+            Dock = DockStyle.Fill,
+            AutoSize = true
+        };
+
+        Button confirmation = new Button
+        {
+            Text = "Flip the clips",
+            Dock = DockStyle.Fill,
+            DialogResult = DialogResult.OK
+        };
+
+        // Añadir controles al layout
+        layoutPanel.Controls.Add(instructions, 0, 0);
+        layoutPanel.SetColumnSpan(instructions, 2); // Que las instrucciones ocupen ambas columnas
+        layoutPanel.Controls.Add(inputValue, 0, 1);
+        layoutPanel.SetColumnSpan(inputValue, 2); // Que el ComboBox ocupe ambas columnas
+        layoutPanel.Controls.Add(patternLabel, 0, 2);
+        layoutPanel.Controls.Add(patternInput, 1, 2);
+        layoutPanel.Controls.Add(resample, 0, 3);
+        layoutPanel.SetColumnSpan(resample, 2); // Que el CheckBox ocupe ambas columnas
+        layoutPanel.Controls.Add(confirmation, 1, 4);
+
+        // Agregar el layout al formulario
+        prompt.Controls.Add(layoutPanel);
 
         if (prompt.ShowDialog() == DialogResult.OK)
         {
+            List<int> flipclips = new List<int>();
+            foreach (var val in patternInput.Text.Split(' '))
+            {
+                int patternVal;
+                if (int.TryParse(val, out patternVal) && patternVal >= 1 && patternVal <= 4)
+                {
+                    flipclips.Add(patternVal);
+                }
+            }
+
             return new Options
             {
                 targetTrack = videoTracks[inputValue.Text],
-                interval = Decimal.ToInt32(inputValueInterval.Value),
-                mode = (flipMode)(mode2.Checked ? 1 : 0),
+                flipPattern = flipclips,
                 disableResample = resample.Checked
             };
         }
